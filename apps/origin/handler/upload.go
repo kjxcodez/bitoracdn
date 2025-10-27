@@ -36,3 +36,69 @@ type UploadCompleteRequest struct {
 	ObjectKey   string `json:"object_key"`
 	ContentType string `json:"content_type"`
 }
+
+// UploadInitHandler generates presigned upload URL
+func (h *UploadHandler) UploadInitHandler(w http.ResponseWriter, r *http.Request) {
+	var req UploadInitRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+
+	key := path.Join(req.UserID, req.Filename)
+
+	ctx := context.Background()
+	url, err := h.Storage.PresignedPut(ctx, key, 15*time.Minute)
+	if err != nil {
+		http.Error(w, "failed to create presigned URL", http.StatusInternalServerError)
+		return
+	}
+
+	resp := UploadInitResponse{
+		PresignedURL: url,
+		ObjectKey:    key,
+		Bucket:       h.Bucket,
+	}
+	writeJSON(w, resp)
+}
+
+// UploadCompleteHandler verifies object and inserts metadata
+func (h *UploadHandler) UploadCompleteHandler(w http.ResponseWriter, r *http.Request) {
+	var req UploadCompleteRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+
+	ctx := context.Background()
+	info, err := h.Storage.StatObject(ctx, req.ObjectKey)
+	if err != nil {
+		http.Error(w, "object not found", http.StatusNotFound)
+		return
+	}
+
+	asset := db.Asset{
+		UserID:      req.UserID,
+		Key:         req.ObjectKey,
+		Bucket:      h.Bucket,
+		Size:        info.Size,
+		ContentType: req.ContentType,
+		ETag:        info.ETag,
+	}
+
+	if err := h.DB.InsertAsset(ctx, asset); err != nil {
+		http.Error(w, "failed to insert metadata", http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, map[string]any{
+		"status": "uploaded",
+		"key":    req.ObjectKey,
+		"size":   info.Size,
+	})
+}
+
+func writeJSON(w http.ResponseWriter, data any) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(data)
+}
