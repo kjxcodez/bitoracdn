@@ -1,0 +1,113 @@
+# ------------------------------
+# Core
+# ------------------------------
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.bak
+*.swp
+
+# ------------------------------
+# Environment & local configs
+# ------------------------------
+.env
+.env.*
+!.env.example
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+config.yaml
+config/*.yaml
+
+# ------------------------------
+# Build & dependency files
+# ------------------------------
+node_modules/
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# Go build files
+bin/
+build/
+dist/
+*.out
+*.exe
+*.test
+coverage.out
+
+# ------------------------------
+# Next.js (control-plane)
+# ------------------------------
+.next/
+out/
+.vercel/
+.vscode/
+.idea/
+
+# ------------------------------
+# TypeScript / SDK packages
+# ------------------------------
+*.tsbuildinfo
+lib/
+tsconfig.tsbuildinfo
+
+# ------------------------------
+# Data & cache directories
+# ------------------------------
+data/
+uploads/
+cache/
+tmp/
+storage/
+edge-cache/
+origin-cache/
+__pycache__/
+*.sqlite3
+
+# ------------------------------
+# Docker & infra
+# ------------------------------
+docker-compose.override.yml
+*.pid
+*.sock
+
+# ------------------------------
+# Logs & metrics
+# ------------------------------
+logs/
+*.log
+*.jsonl
+
+# ------------------------------
+# Test artifacts
+# ------------------------------
+coverage/
+__coverage__/
+test-results/
+jest-html-reporters-*.html
+
+# ------------------------------
+# OS / Editor files
+# ------------------------------
+.idea/
+.vscode/
+*.sublime-workspace
+*.sublime-project
+
+# ------------------------------
+# Supabase artifacts (if using CLI)
+# ------------------------------
+.supabase/
+supabase/.temp/
+supabase/.branches/
+
+# ------------------------------
+# Miscellaneous
+# ------------------------------
+*.tgz
+*.tar.gz
+*.zip
+*.7z
