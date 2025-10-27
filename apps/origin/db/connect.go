@@ -4,7 +4,7 @@ import (
 	"context"
 	"os"
 	"time"
-
+	"fmt"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -42,4 +42,4 @@ func (db *DB) Close() {
 	db.Pool.Close()
 }
 
-var ErrMissingDBURL = fmt.Errorf("missing ORIGIN_DATABASE_URL")
+var ErrMissingDBURL = fmt.Errorf("missing DATABASE_URL")
