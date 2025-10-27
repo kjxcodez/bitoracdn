@@ -61,7 +61,6 @@ data/
 uploads/
 cache/
 tmp/
-storage/
 edge-cache/
 origin-cache/
 __pycache__/
