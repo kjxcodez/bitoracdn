@@ -1,45 +1,60 @@
 package db
 
 import (
+	"context"
+	"database/sql"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"os"
-	"path/filepath"
 
-	"github.com/golang-migrate/migrate/v4"
-	_ "github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
+	_ "github.com/jackc/pgx/v5/stdlib" // register "pgx" driver
 )
 
-// RunMigrations runs all pending DB migrations
+// RunMigrations manually runs SQL files from remote URLs.
 func RunMigrations() error {
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
 		return fmt.Errorf("missing DATABASE_URL")
 	}
 
-	// Get absolute path for local migrations folder
-	path, err := filepath.Abs("db/migrations")
+	db, err := sql.Open("pgx", dbURL)
 	if err != nil {
-		return err
+		return fmt.Errorf("db open: %w", err)
+	}
+	defer db.Close()
+
+	// 🔹 List your raw SQL files here (order matters)
+	migrations := []string{
+		"https://raw.githubusercontent.com/kjxcodez/bitoracdn/refs/heads/main/apps/origin/db/migrations/001_init_schema.up.sql",
+		// add more as you version your schema
 	}
 
-	m, err := migrate.New(
-		fmt.Sprintf("file://%s", path),
-		dbURL,
-	)
-	if err != nil {
-		return fmt.Errorf("migration init failed: %w", err)
-	}
+	ctx := context.Background()
 
-	if err := m.Up(); err != nil {
-		if err == migrate.ErrNoChange {
-			log.Println("✅ Database is up-to-date.")
-			return nil
+	for _, url := range migrations {
+		log.Printf("🚀 Applying migration: %s", url)
+
+		resp, err := http.Get(url)
+		if err != nil {
+			return fmt.Errorf("fetch %s: %w", url, err)
 		}
-		return fmt.Errorf("migration failed: %w", err)
+		defer resp.Body.Close()
+
+		sqlBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("read %s: %w", url, err)
+		}
+
+		sqlText := string(sqlBytes)
+		if _, err := db.ExecContext(ctx, sqlText); err != nil {
+			return fmt.Errorf("exec %s: %w", url, err)
+		}
+
+		log.Printf("✅ Migration applied: %s", url)
 	}
 
-	log.Println("✅ Database migrations applied successfully.")
+	log.Println("✅ All remote migrations executed successfully.")
 	return nil
 }
