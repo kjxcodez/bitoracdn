@@ -2,7 +2,7 @@ package storage
 
 import (
 	"context"
-	"net/url"
+	// "net/url"
 	"time"
 
 	"github.com/minio/minio-go/v7"
@@ -50,7 +50,7 @@ func NewS3Storage(endpoint, accessKey, secretKey, bucket string, useSSL bool) (*
 
 // Presigned PUT URL (for client upload)
 func (s *S3Storage) PresignedPut(ctx context.Context, key string, expiry time.Duration) (string, error) {
-	reqParams := make(url.Values)
+	// reqParams := make(url.Values)
 	u, err := s.Client.PresignedPutObject(ctx, s.Bucket, key, expiry)
 	if err != nil {
 		return "", err

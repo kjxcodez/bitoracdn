@@ -1,20 +1,24 @@
 package main
 
 import (
-	"context"
-	"fmt"
 	"log"
 	"net/http"
-	"time"
-	"github.com/joho/godotenv"
+	"os"
+
 	"bitoracdn/origin/db"
+	"bitoracdn/origin/handlers"
+	"bitoracdn/origin/storage"
+
+	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 )
 
 func main() {
-	// Load .env automatically
-    if err := godotenv.Load(); err != nil {
-        log.Println("⚠️  No .env file found, using system env vars")
-    }
+	// Load .env
+	if err := godotenv.Load(); err != nil {
+		log.Println("⚠️  No .env file found")
+	}
+
 	// Connect DB
 	dbConn, err := db.Connect()
 	if err != nil {
@@ -22,18 +26,32 @@ func main() {
 	}
 	defer dbConn.Close()
 
-	// Health check endpoint
-	http.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
-		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-		defer cancel()
-		if err := dbConn.Pool.Ping(ctx); err != nil {
-			w.WriteHeader(500)
-			w.Write([]byte("db disconnected"))
-			return
-		}
+	// Initialize Supabase S3 client
+	storageClient := storage.NewSupabaseStorage(
+		os.Getenv("SUPABASE_ENDPOINT"),
+		os.Getenv("SUPABASE_BUCKET"),
+		os.Getenv("SUPABASE_ACCESS_KEY"),
+	)
+
+	if err != nil {
+		log.Fatalf("Storage init error: %v", err)
+	}
+
+	// Setup handlers
+	uploader := &handlers.UploadHandler{
+		DB:      dbConn,
+		Storage: storageClient,
+		Bucket:  os.Getenv("SUPABASE_BUCKET"),
+	}
+
+	r := mux.NewRouter()
+	r.HandleFunc("/upload/init", uploader.UploadInitHandler).Methods("POST")
+	r.HandleFunc("/upload/complete", uploader.UploadCompleteHandler).Methods("POST")
+
+	r.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
 		w.Write([]byte("ok"))
 	})
 
-	fmt.Println("✅ Origin server running on :8081")
-	log.Fatal(http.ListenAndServe(":8081", nil))
+	log.Println("✅ Origin server running on :8081")
+	log.Fatal(http.ListenAndServe(":8081", r))
 }
