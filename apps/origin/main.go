@@ -26,6 +26,12 @@ func main() {
 	}
 	defer dbConn.Close()
 
+	// Run migrations
+	if err := db.RunMigrations(); err != nil {
+		log.Fatalf("Migration error: %v", err)
+	}
+
+
 	// Initialize Supabase S3 client
 	storageClient := storage.NewSupabaseStorage(
 		os.Getenv("SUPABASE_ENDPOINT"),
